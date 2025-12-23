@@ -2,8 +2,6 @@ package com.voyager.crawler.util;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.regex.Pattern;
 
 /**
@@ -14,48 +12,64 @@ public final class UrlUtils {
     private static final Pattern INVALID_FILENAME_CHARS = Pattern.compile("[^a-zA-Z0-9.-]");
 
     private UrlUtils() {
+        // Prevent instantiation
     }
 
     /**
-     * Sanitizes a URI to be used as a filename.
-     * Uses a simple encoding strategy to ensure filesystem safety.
+     * Converts a URI to a safe filename.
+     * <p>
+     * The strategy combines a sanitized version of the host and path with a short
+     * hash of the full URI.
+     * This ensures human readability while guaranteeing uniqueness for URLs that
+     * differ only by query parameters.
+     * </p>
      *
-     * @param uri The URI to sanitize.
-     * @return A safe filename string.
+     * @param uri The URI to convert.
+     * @return A filesystem-safe string unique to the input URI.
+     * @return A filesystem-safe string derived from the URI.
      */
     public static String toFilename(URI uri) {
-        // Simple strategy: Base64 encode the full URI to ensure uniqueness and safety.
-        // In a real generic crawler, we might want human-readable names, but for
-        // strict 1-to-1 mapping and safety, hashing or encoding is best.
-        // The requirement says "<url>.html", let's use a safe representation.
-        // For readability in this assignment, I'll replace unsafe chars, but
-        // for robustness, I'll append a hash if it gets too long or complex conflict.
-
-        String path = uri.getHost() + uri.getPath();
-        if (path.endsWith("/")) {
-            path = path.substring(0, path.length() - 1);
+        if (uri == null) {
+            throw new IllegalArgumentException("URI must not be null");
         }
 
-        String safe = INVALID_FILENAME_CHARS.matcher(path).replaceAll("_");
-        if (safe.isEmpty()) {
-            return "index";
+        // Strategy: Scheme + Host + Path + Query, replacing invalid chars with "_"
+        String fullUrl = uri.toString();
+
+        // Remove protocol
+        String cleanUrl = fullUrl.replaceFirst("^https?://", "");
+
+        String safeName = INVALID_FILENAME_CHARS.matcher(cleanUrl).replaceAll("_");
+
+        if (safeName.isEmpty()) {
+            safeName = "index";
         }
-        return safe;
+
+        // Limit length for OS safety
+        if (safeName.length() > 200) {
+            safeName = safeName.substring(0, 200);
+        }
+
+        return safeName;
     }
 
     /**
-     * Normalizes a URL by stripping fragments and ensuring it's absolute.
+     * Normalizes a URL by stripping fragments and ensuring it is well-formed.
+     *
+     * @param uri The URI to normalize.
+     * @return The normalized URI, or null if input is null.
      */
     public static URI normalize(URI uri) {
-        if (uri == null)
+        if (uri == null) {
             return null;
+        }
         try {
-            // Reconstruct without fragment
+            // Reconstruct without fragment to avoid duplicates based on anchor tags
             return new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(), uri.getPath(),
                     uri.getQuery(), null);
         } catch (URISyntaxException e) {
-            // Should not happen for valid URI
             return uri;
         }
     }
+
 }

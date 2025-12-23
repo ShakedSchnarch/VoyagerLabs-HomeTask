@@ -12,7 +12,8 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 
 /**
- * Task to process a single URL: Fetch -> Save -> Extract Links.
+ * A Callable task responsible for processing a single URL.
+ * Steps: Fetch -> Save -> Extract Links.
  */
 public class CrawlTask implements Callable<Set<URI>> {
     private static final Logger logger = LoggerFactory.getLogger(CrawlTask.class);
@@ -33,24 +34,20 @@ public class CrawlTask implements Callable<Set<URI>> {
 
     @Override
     public Set<URI> call() {
-        logger.debug("Starting task for {} at depth {}", uri, depth);
+        if (logger.isDebugEnabled()) {
+            logger.debug("Starting task for {} at depth {}", uri, depth);
+        }
 
         try {
-            // 1. Fetch
             var contentOpt = fetcher.fetch(uri);
             if (contentOpt.isEmpty()) {
                 return Collections.emptySet();
             }
             String content = contentOpt.get();
 
-            // 2. Save
             storage.save(uri, content, depth);
 
-            // 3. Parse (only if we need more links, usually checked by manager, but task
-            // can return them regardless)
-            // Optimization: if this is maxDepth, we technically don't need to parse, but
-            // the contract says "return discovered links".
-            // The manager can decide to ignore them.
+            // Extract links for further processing
             return parser.extractLinks(uri, content);
 
         } catch (Exception e) {

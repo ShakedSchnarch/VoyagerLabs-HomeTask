@@ -1,19 +1,19 @@
 package com.voyager.crawler.parser;
 
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
+import org.jsoup.nodes.*;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
-
+import java.util.*;
 import com.voyager.crawler.util.UrlUtils;
 
+/**
+ * Implementation of HtmlParser using Jsoup.
+ * Extracts absolute links from HTML content.
+ */
 public class JsoupHtmlParser implements HtmlParser {
     private static final Logger logger = LoggerFactory.getLogger(JsoupHtmlParser.class);
 
@@ -22,7 +22,7 @@ public class JsoupHtmlParser implements HtmlParser {
         Objects.requireNonNull(baseUri, "baseUri must not be null");
         Objects.requireNonNull(html, "html must not be null");
 
-        Set<URI> links = new HashSet<>();
+        Set<URI> links = new LinkedHashSet<>();
         try {
             Document doc = Jsoup.parse(html, baseUri.toString());
             Elements anchors = doc.select("a[href]");

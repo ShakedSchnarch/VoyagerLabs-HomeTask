@@ -1,22 +1,16 @@
 package com.voyager.crawler.core;
 
 import com.voyager.crawler.config.CrawlerConfig;
-import com.voyager.crawler.io.ContentFetcher;
-import com.voyager.crawler.io.ContentStorage;
+import com.voyager.crawler.io.*;
 import com.voyager.crawler.parser.HtmlParser;
 import com.voyager.crawler.util.UrlDedupService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class CrawlerManager {
     private static final Logger logger = LoggerFactory.getLogger(CrawlerManager.class);
@@ -27,6 +21,8 @@ public class CrawlerManager {
     private final ContentStorage storage;
     private final UrlDedupService dedupService;
     private final ExecutorService executor;
+
+    private final AtomicInteger pagesSaved = new AtomicInteger(0);
 
     public CrawlerManager(CrawlerConfig config, ContentFetcher fetcher, HtmlParser parser, ContentStorage storage,
             UrlDedupService dedupService) {
@@ -58,11 +54,15 @@ public class CrawlerManager {
 
             int finalDepth = currentDepth;
 
-            // Submit all tasks for this wave
+            // Submit tasks for this wave
             List<CompletableFuture<Set<URI>>> futures = currentDepthUrls.stream()
                     .map(uri -> {
                         CrawlTask task = new CrawlTask(uri, finalDepth, fetcher, parser, storage);
-                        return CompletableFuture.supplyAsync(task::call, executor);
+                        return CompletableFuture.supplyAsync(task::call, executor)
+                                .thenApply(links -> {
+                                    pagesSaved.incrementAndGet();
+                                    return links;
+                                });
                     })
                     .toList();
 
@@ -70,24 +70,22 @@ public class CrawlerManager {
             try {
                 allDone.join();
             } catch (Exception e) {
-                logger.error("Error waiting for wave completion", e);
+                logger.error("Error waiting for depth {} completion", currentDepth, e);
             }
 
             // Collect results for NEXT wave
             if (currentDepth < config.maxDepth()) {
-                Set<URI> nextDepthUrls = Collections.synchronizedSet(new HashSet<>());
+                // No need for synchronization here as we process sequentially in this thread
+                Set<URI> nextDepthUrls = new HashSet<>();
 
-                // Process each result set individually to apply the 'Per Page' limit
+                // Process each result set individually
                 futures.forEach(f -> {
                     try {
                         Set<URI> links = f.join(); // Result from one page
 
-                        // Apply Branching Factor Limit HERE
                         links.stream()
-                                .limit(config.maxLinksPerPage()) // "maximal number of different URLs to extract from
-                                                                 // the page"
+                                .limit(config.maxLinksPerPage())
                                 .forEach(link -> {
-                                    // Check global uniqueness / add to next wave
                                     if (config.isUnique()) {
                                         if (dedupService.visit(link)) {
                                             nextDepthUrls.add(link);
@@ -110,7 +108,6 @@ public class CrawlerManager {
             currentDepth++;
         }
 
-        // More accurate logging
         logger.info("Crawl finished. Total pages visited (Persisted): {}", dedupService.size());
     }
 

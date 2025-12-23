@@ -7,11 +7,13 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.Objects;
 
+/**
+ * Implementation of ContentStorage that saves pages to the local filesystem.
+ * Directory structure: <root>/<depth>/<safe_filename>
+ */
 public class LocalFileStorage implements ContentStorage {
     private static final Logger logger = LoggerFactory.getLogger(LocalFileStorage.class);
     private final Path rootDir;

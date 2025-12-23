@@ -1,27 +1,17 @@
 package com.voyager.crawler.core;
 
 import com.voyager.crawler.config.CrawlerConfig;
-import com.voyager.crawler.io.ContentFetcher;
-import com.voyager.crawler.io.ContentStorage;
+import com.voyager.crawler.io.*;
 import com.voyager.crawler.parser.HtmlParser;
-import com.voyager.crawler.util.ConcurrentDedupService;
-import com.voyager.crawler.util.UrlDedupService;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import com.voyager.crawler.util.*;
+import org.junit.jupiter.api.*;
+import org.mockito.*;
 
 import java.net.URI;
-import java.util.Collections;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.IntStream;
-import java.util.stream.Collectors;
+import java.util.*;
+import java.util.stream.*;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class CrawlerManagerTest {

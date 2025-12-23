@@ -1,84 +1,44 @@
-# Java 21 High-Performance Web Crawler
+# Java 21 Web Crawler
 
-A robust, multi-threaded web crawler designed for high throughput and reliability. This project demonstrates modern Java concurrency patterns using **Virtual Threads** (Project Loom) and strictly adheres to **Design by Contract** principles.
+A simple, multi-threaded web crawler built with Java 21 Virtual Threads (Project Loom).
 
-## 🚀 Features
+## Key Features
 
-*   **Java 21 Virtual Threads**: Utilizes `Executors.newVirtualThreadPerTaskExecutor()` for blocking I/O operations without the overhead of OS threads.
-*   **Design by Contract**: Core components (`ContentFetcher`, `HtmlParser`, `ContentStorage`) are defined with strict interfaces, preconditions, and postconditions.
-*   **Branching Limit**: Configurable strict limit on the number of links extracted *per page* (Branching Factor), ensuring controlled growth.
-*   **Resilience**: Smart retry mechanism with **Exponential Backoff** to handle `503 Service Unavailable` and `429 Too Many Requests`.
-*   **Politeness**: Implements Jitter (randomized delay) to behave as a good citizen on the web.
-*   **BFS "Wave" Algorithm**: Crawls in distinct depth layers, ensuring the "max depth" constraint is strictly observed.
+* **Virtual Threads**: Uses `Executors.newVirtualThreadPerTaskExecutor()` to handle I/O efficiently without managing a complex thread pool.
+* **BFS Traversal**: Crawls page by page in localized "waves" (depth 0, then depth 1, etc.).
+* **Unique Filenames**: Saves pages as `<depth>/<clean_url>.html`, ensuring safe filenames for all OSs.
+* **Politeness**: Checks `Content-Type` to download only HTML and adds a randomized delay between requests.
+* **Resilience**: Retries failed requests with exponential backoff.
 
-## 🛠 Prerequisites
+## How to Run
 
-*   **Java 21 SDK** (Required for Virtual Threads)
-*   **Gradle** (Wrapper or installed)
-
-## 📦 Installation & Build
-
-Clone the repository and build the project using Gradle:
+The easiest way to run the crawler is using the Gradle wrapper included in the project:
 
 ```bash
-git clone https://github.com/your-username/voyager-crawler.git
-cd voyager-crawler
-gradle build
+./gradlew run --args="https://news.ycombinator.com/ 5 2 true"
 ```
 
-To run the full suite of Unit Tests (JUnit 5 + Mockito):
+**Arguments:**
+
+1. **Seed URL**: Where to start.
+2. **Max Links**: Max links to extract per page (random subset).
+3. **Depth**: 0 = seed only, 1 = seed + immediate children.
+4. **Unique**: `true` = globally unique (never revisit), `false` = unique per crawl level only.
+
+**Note:** The crawler ignores `robots.txt` and does not render JavaScript.
+
+## Project Structure
+
+* `CrawlerManager`: Main logic. Manages the crawl queue and shuts down gracefully.
+* `ContentFetcher`: Wrapper around Java's `HttpClient` with retry logic.
+* `HtmlParser`: Uses **Jsoup** to extracting links. Validates strictly (http/https).
+* `LocalFileStorage`: Saves downloaded HTML to the `crawled_data/` directory.
+
+## Testing
+
+Access unit tests via:
+
 ```bash
-gradle test
-```
+./gradlew test
+(Includes basic tests for URL sanitization and storage logic).
 
-## 🏃 Usage
-
-The application is a CLI tool accepting 4 arguments:
-`java -jar crawler.jar <SeedURL> <MaxLinksPerPage> <Depth> <Unique>`
-
-### Quick Run (via Gradle)
-
-```bash
-# Syntax: gradle run --args="<URL> <MaxLinks> <Depth> <IsUnique>"
-
-gradle run --args="https://news.ycombinator.com/ 5 2 true"
-```
-
-*   **URL**: The starting point (Seed).
-*   **MaxLinks**: The maximum number of new links to extract from *each* visited page.
-*   **Depth**: How many levels deep to crawl (0 = only seed, 1 = seed + children, etc.).
-*   **IsUnique**: Whether to enforce global uniqueness (visited pages are never re-visited).
-
-### Output
-Crawled pages are saved efficiently to local disk in the `crawled_data` directory, organized by depth:
-
-```text
-crawled_data/
-├── 0/
-│   └── news.ycombinator.com.html
-├── 1/
-│   ├── news.ycombinator.com_item_id_123.html
-│   └── example.com_blog_post.html
-```
-
-## 🏗 Architecture
-
-The system is decomposed into single-responsibility components:
-
-*   **`CrawlerManager`**: The orchestration engine. It manages the BFS queues and submits tasks to the Virtual Thread executor.
-*   **`ContentFetcher`**: Handles HTTP networking. Includes retry logic and politeness delays.
-*   **`HtmlParser`**: Uses **Jsoup** to robustly parse HTML and extract canonical links.
-*   **`ContentStorage`**: Persists content to disk. Filenames are sanitized for cross-platform compatibility.
-*   **`UrlDedupService`**: A thread-safe service backed by `ConcurrentHashMap` to track visited URLs in O(1) time.
-
-## 🧪 Testing
-
-The project puts a strong emphasis on testability.
-*   Network calls are abstracted behind `ContentFetcher`, allowing tests to run without internet access.
-*   Unit tests verify edge cases like:
-    *   Max depth cutoff.
-    *   Cycle detection (visiting the same URL twice).
-    *   Branching factor limits (e.g., page has 100 links, we only take 5).
-
----
-*Submitted as a Home Assignment for Voyager Labs.*

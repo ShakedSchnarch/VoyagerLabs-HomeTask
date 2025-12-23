@@ -2,31 +2,25 @@ package com.voyager.crawler;
 
 import com.voyager.crawler.config.CrawlerConfig;
 import com.voyager.crawler.core.CrawlerManager;
-import com.voyager.crawler.io.ContentFetcher;
-import com.voyager.crawler.io.ContentStorage;
-import com.voyager.crawler.io.JavaHttpClientFetcher;
-import com.voyager.crawler.io.LocalFileStorage;
-import com.voyager.crawler.parser.HtmlParser;
-import com.voyager.crawler.parser.JsoupHtmlParser;
-import com.voyager.crawler.util.ConcurrentDedupService;
-import com.voyager.crawler.util.UrlDedupService;
+import com.voyager.crawler.io.*;
+import com.voyager.crawler.parser.*;
+import com.voyager.crawler.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
-import java.util.Arrays;
 
+/**
+ * Main entry point for the Voyager Crawler.
+ */
 public class CrawlerApplication {
     private static final Logger logger = LoggerFactory.getLogger(CrawlerApplication.class);
 
     public static void main(String[] args) {
         try {
             if (args.length < 4) {
-                System.out.println("Usage: java -jar crawler.jar <seedUrl> <maxLinksPerPage> <maxDepth> <isUnique>");
-                System.out.println("Wait! I will run a default demo for you because arguments are missing.");
-                // Fallback for easy "gradle run" without args
-                runCrawler(new URI("https://news.ycombinator.com/"), 5, 2, true);
-                return;
+                printUsage();
+                System.exit(1);
             }
 
             URI seedUrl = new URI(args[0]);
@@ -37,16 +31,34 @@ public class CrawlerApplication {
             runCrawler(seedUrl, maxLinksPerPage, maxDepth, isUnique);
 
         } catch (Exception e) {
-            logger.error("Application failed: " + e.getMessage(), e);
+            logger.error("Application failed: {}", e.getMessage(), e);
+            printUsage();
             System.exit(1);
         }
     }
 
+    private static void printUsage() {
+        System.out.println("""
+                Usage: java -jar crawler.jar <seedUrl> <maxLinksPerPage> <maxDepth> <isUnique>
+
+                Arguments:
+                  seedUrl          - The starting URL (e.g., https://example.com)
+                  maxLinksPerPage  - Maximum number of links to follow from each page
+                  maxDepth         - Traversal depth (0 = only seed)
+                  isUnique         - true for global uniqueness, false for per-level uniqueness
+
+                Example:
+                  java -jar crawler.jar https://www.ynetnews.com 5 2 true
+                """);
+    }
+
     private static void runCrawler(URI seed, int maxLinks, int depth, boolean unique) {
-        logger.info("Running with: Seed={}, MaxLinksPerPage={}, Depth={}, Unique={}", seed, maxLinks, depth, unique);
+        logger.info("Initializing Crawler with: Seed={}, MaxLinks={}, Depth={}, Unique={}", seed, maxLinks, depth,
+                unique);
 
         CrawlerConfig config = new CrawlerConfig(seed, maxLinks, depth, unique);
 
+        // Dependency Injection wiring
         ContentFetcher fetcher = new JavaHttpClientFetcher();
         HtmlParser parser = new JsoupHtmlParser();
         ContentStorage storage = new LocalFileStorage("crawled_data");
@@ -58,7 +70,7 @@ public class CrawlerApplication {
         manager.crawl();
         long end = System.currentTimeMillis();
 
-        logger.info("Total processing time: {} ms", (end - start));
+        logger.info("Crawl completed in {} ms", (end - start));
         manager.shutdown();
     }
 }
