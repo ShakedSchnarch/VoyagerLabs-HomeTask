@@ -1,0 +1,20 @@
+# Gradle
+.gradle/
+build/
+app/build/
+
+# IDEA / Eclipse
+.idea/
+*.iml
+*.iws
+*.ipr
+.settings/
+.classpath
+.project
+.vscode/
+
+# OS specific checks
+.DS_Store
+
+# Application Specific
+crawled_data/
