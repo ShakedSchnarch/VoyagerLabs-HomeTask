@@ -23,7 +23,26 @@ public class CrawlerManager {
     private final ExecutorService executor;
 
     private final AtomicInteger pagesSaved = new AtomicInteger(0);
+    // Limit concurrent I/O operations to avoid "Too many open files" and generic
+    // 429s.
+    // Virtual threads are cheap, but sockets/descriptors are not.
+    private final Semaphore rateLimiter = new Semaphore(50);
 
+    /**
+     * Constructs a new CrawlerManager.
+     * <p>
+     * Uses {@link Executors#newVirtualThreadPerTaskExecutor()} for high-throughput
+     * I/O-bound tasks testing.
+     * This avoids the overhead of platform threads while maintaining a simple
+     * thread-per-task coding style.
+     * </p>
+     *
+     * @param config       Configuration parameters.
+     * @param fetcher      Component to fetch web content.
+     * @param parser       Component to parse HTML.
+     * @param storage      Component to save content to disk.
+     * @param dedupService Component to manage visited URLs.
+     */
     public CrawlerManager(CrawlerConfig config, ContentFetcher fetcher, HtmlParser parser, ContentStorage storage,
             UrlDedupService dedupService) {
         this.config = config;
@@ -36,7 +55,6 @@ public class CrawlerManager {
 
     public void crawl() {
         logger.info("Starting crawl: {}", config);
-
         Set<URI> currentDepthUrls = new HashSet<>();
         if (config.isUnique()) {
             if (dedupService.visit(config.seedUrl())) {
@@ -58,7 +76,21 @@ public class CrawlerManager {
             List<CompletableFuture<Set<URI>>> futures = currentDepthUrls.stream()
                     .map(uri -> {
                         CrawlTask task = new CrawlTask(uri, finalDepth, fetcher, parser, storage);
-                        return CompletableFuture.supplyAsync(task::call, executor)
+                        return CompletableFuture.supplyAsync(() -> {
+                            try {
+                                rateLimiter.acquire();
+                                try {
+                                    return task.call();
+                                } finally {
+                                    rateLimiter.release();
+                                }
+                            } catch (Exception e) {
+                                if (e instanceof InterruptedException) {
+                                    Thread.currentThread().interrupt();
+                                }
+                                throw new CompletionException(e);
+                            }
+                        }, executor)
                                 .thenApply(links -> {
                                     pagesSaved.incrementAndGet();
                                     return links;
@@ -108,10 +140,23 @@ public class CrawlerManager {
             currentDepth++;
         }
 
-        logger.info("Crawl finished. Total pages visited (Persisted): {}", dedupService.size());
+        logger.info("Crawl finished. Total pages successfully processed: {}", pagesSaved.get());
     }
 
     public void shutdown() {
-        executor.shutdownNow();
+        if (executor != null) {
+            logger.info("Shutting down crawler executor...");
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                    logger.warn("Executor did not terminate in time, forcing shutdown...");
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                logger.warn("Shutdown interrupted, forcing shutdown...");
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 }

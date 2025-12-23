@@ -21,11 +21,13 @@ The easiest way to run the crawler is using the Gradle wrapper included in the p
 **Arguments:**
 
 1. **Seed URL**: Where to start.
-2. **Max Links**: Max links to extract per page (random subset).
+2. **Max Links**: Max links to extract per page (discovery order).
 3. **Depth**: 0 = seed only, 1 = seed + immediate children.
 4. **Unique**: `true` = globally unique (never revisit), `false` = unique per crawl level only.
 
-**Note:** The crawler ignores `robots.txt` and does not render JavaScript.
+**Note:**
+* The crawler ignores `robots.txt` and does not render JavaScript.
+* Filenames are sanitized and truncated to 200 characters for filesystem safety.
 
 ## Project Structure
 
@@ -40,5 +42,6 @@ Access unit tests via:
 
 ```bash
 ./gradlew test
-(Includes basic tests for URL sanitization and storage logic).
+```
 
+(Includes basic tests for URL sanitization and storage logic).

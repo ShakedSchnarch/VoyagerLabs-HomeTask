@@ -81,7 +81,7 @@ public class JavaHttpClientFetcher implements ContentFetcher {
             }
         }
 
-        logger.error("Giving up on URI: {} after {} attempts", uri, MAX_RETRIES);
+        logger.error("Dropping URL after {} attempts: {}", MAX_RETRIES, uri);
         return Optional.empty();
     }
 

@@ -67,10 +67,13 @@ public class CrawlerApplication {
         CrawlerManager manager = new CrawlerManager(config, fetcher, parser, storage, dedupService);
 
         long start = System.currentTimeMillis();
-        manager.crawl();
+        try {
+            manager.crawl();
+        } finally {
+            manager.shutdown();
+        }
         long end = System.currentTimeMillis();
 
         logger.info("Crawl completed in {} ms", (end - start));
-        manager.shutdown();
     }
 }

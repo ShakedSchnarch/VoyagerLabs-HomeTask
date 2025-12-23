@@ -15,7 +15,7 @@ class UrlUtilsTest {
         String filename2 = UrlUtils.toFilename(uri2);
 
         assertNotEquals(filename1, filename2, "Filenames should differ due to different query params");
-        assertTrue(filename1.startsWith("example.com_page"), "Filename should contain readable prefix");
+        assertTrue(filename1.startsWith("example_com_page"), "Filename should contain readable prefix");
     }
 
     @Test
@@ -25,14 +25,14 @@ class UrlUtilsTest {
         URI uri = new URI("https://example.com/foo/bar?q=value");
         String filename = UrlUtils.toFilename(uri);
 
-        // The slash '/' and question mark '?' should be replaced or handled
+        // The slash '/' and question mark '?' should be replaced by underscores
         assertFalse(filename.contains("/"), "Slash should be replaced");
         assertFalse(filename.contains("?"), "Question mark should be replaced");
         assertTrue(filename.contains("_"), "Separators should use underscore");
 
-        // Verify unique hash suffix is present
+        // Verify structure survives (host_path...)
         String[] parts = filename.split("_");
-        assertTrue(parts.length >= 2, "Should have prefix and hash");
+        assertTrue(parts.length >= 2, "Should have multiple parts due to replacements");
     }
 
     @Test

@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
  */
 public final class UrlUtils {
 
-    private static final Pattern INVALID_FILENAME_CHARS = Pattern.compile("[^a-zA-Z0-9.-]");
+    private static final Pattern INVALID_FILENAME_CHARS = Pattern.compile("[^a-zA-Z0-9]");
 
     private UrlUtils() {
         // Prevent instantiation
@@ -18,14 +18,11 @@ public final class UrlUtils {
     /**
      * Converts a URI to a safe filename.
      * <p>
-     * The strategy combines a sanitized version of the host and path with a short
-     * hash of the full URI.
-     * This ensures human readability while guaranteeing uniqueness for URLs that
-     * differ only by query parameters.
+     * The strategy combines a sanitized version of the host and path.
+     * Invalid characters are replaced with underscores.
      * </p>
      *
      * @param uri The URI to convert.
-     * @return A filesystem-safe string unique to the input URI.
      * @return A filesystem-safe string derived from the URI.
      */
     public static String toFilename(URI uri) {
