@@ -36,6 +36,9 @@ The easiest way to run the crawler is using the Gradle wrapper included in the p
 * `HtmlParser`: Uses **Jsoup** to extracting links. Validates strictly (http/https).
 * `LocalFileStorage`: Saves downloaded HTML to the `crawled_data/` directory.
 
+## Architecture Diagram
+![alt text](architecture_diagram.png "Architecture Diagram")
+
 ## Testing
 
 Access unit tests via:
