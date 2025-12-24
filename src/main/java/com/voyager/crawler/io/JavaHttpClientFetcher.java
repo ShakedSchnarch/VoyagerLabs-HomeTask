@@ -3,12 +3,13 @@ package com.voyager.crawler.io;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.*;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
-import java.nio.charset.StandardCharsets;
 
 /**
  * Implementation of ContentFetcher using Java's native HttpClient (available
@@ -48,25 +49,30 @@ public class JavaHttpClientFetcher implements ContentFetcher {
                         .header("User-Agent", "VoyagerCrawler/1.0 (Student Project)")
                         .build();
 
-                HttpResponse<java.io.InputStream> response = client.send(request,
+                HttpResponse<InputStream> response = client.send(request,
                         HttpResponse.BodyHandlers.ofInputStream());
                 int status = response.statusCode();
 
-                if (status >= 200 && status < 300) {
-                    // Check Content-Type
-                    Optional<String> contentTypeOpt = response.headers().firstValue("Content-Type");
-                    if (contentTypeOpt.isPresent() && !contentTypeOpt.get().toLowerCase().contains("text/html")) {
-                        logger.debug("Skipping non-HTML content: {} ({})", uri, contentTypeOpt.get());
-                        return Optional.empty();
+                try (InputStream bodyStream = response.body()) {
+                    if (status >= 200 && status < 300) {
+                        // Check Content-Type
+                        Optional<String> contentTypeOpt = response.headers().firstValue("Content-Type");
+                        if (contentTypeOpt.isPresent() && !contentTypeOpt.get().toLowerCase().contains("text/html")) {
+                            logger.debug("Skipping non-HTML content: {} ({})", uri, contentTypeOpt.get());
+                            return Optional.empty();
+                        }
+
+                        String body = new String(bodyStream.readAllBytes(), StandardCharsets.UTF_8);
+                        return Optional.of(body);
+
                     }
 
-                    String body = new String(response.body().readAllBytes(), StandardCharsets.UTF_8);
-                    return Optional.of(body);
+                    if (isRetryable(status)) {
+                        logger.warn("Fetch failed for URI: {}. Status code: {}. Retrying...", uri, status);
+                        attempt++;
+                        continue;
+                    }
 
-                } else if (isRetryable(status)) {
-                    logger.warn("Fetch failed for URI: {}. Status code: {}. Retrying...", uri, status);
-                    attempt++;
-                } else {
                     logger.warn("Fetch failed for URI: {}. Status code: {}. Aborting task.", uri, status);
                     return Optional.empty();
                 }

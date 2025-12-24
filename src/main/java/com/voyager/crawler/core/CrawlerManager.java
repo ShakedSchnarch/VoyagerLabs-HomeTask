@@ -87,7 +87,8 @@ public class CrawlerManager {
             // Submit tasks for this wave
             List<CompletableFuture<Set<URI>>> futures = currentDepthUrls.stream()
                     .map(uri -> {
-                        CrawlTask task = new CrawlTask(uri, finalDepth, fetcher, parser, storage, shouldExtractLinks);
+                        CrawlTask task = new CrawlTask(uri, finalDepth, fetcher, parser, storage, shouldExtractLinks,
+                                pagesSaved);
                         return CompletableFuture.supplyAsync(() -> {
                             try {
                                 rateLimiter.acquire();
@@ -102,11 +103,7 @@ public class CrawlerManager {
                                 }
                                 throw new CompletionException(e);
                             }
-                        }, executor)
-                                .thenApply(links -> {
-                                    pagesSaved.incrementAndGet();
-                                    return links;
-                                });
+                        }, executor);
                     })
                     .toList();
 

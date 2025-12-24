@@ -10,6 +10,7 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A Callable task responsible for processing a single URL.
@@ -24,6 +25,7 @@ public class CrawlTask implements Callable<Set<URI>> {
     private final HtmlParser parser;
     private final ContentStorage storage;
     private final boolean extractLinks;
+    private final AtomicInteger pagesSaved;
 
     /**
      * Creates a crawling task for a single URI.
@@ -35,15 +37,17 @@ public class CrawlTask implements Callable<Set<URI>> {
      * @param storage       storage backend for saving fetched pages.
      * @param extractLinks  flag indicating whether to extract links from the
      *                      fetched content.
+     * @param pagesSaved    shared counter for successful saves.
      */
     public CrawlTask(URI uri, int depth, ContentFetcher fetcher, HtmlParser parser, ContentStorage storage,
-            boolean extractLinks) {
+            boolean extractLinks, AtomicInteger pagesSaved) {
         this.uri = uri;
         this.depth = depth;
         this.fetcher = fetcher;
         this.parser = parser;
         this.storage = storage;
         this.extractLinks = extractLinks;
+        this.pagesSaved = pagesSaved;
     }
 
     /**
@@ -66,6 +70,7 @@ public class CrawlTask implements Callable<Set<URI>> {
             String content = contentOpt.get();
 
             storage.save(uri, content, depth);
+            pagesSaved.incrementAndGet();
 
             if (!extractLinks) {
                 return Collections.emptySet();

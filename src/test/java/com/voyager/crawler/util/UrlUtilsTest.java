@@ -15,7 +15,7 @@ class UrlUtilsTest {
         String filename2 = UrlUtils.toFilename(uri2);
 
         assertNotEquals(filename1, filename2, "Filenames should differ due to different query params");
-        assertTrue(filename1.startsWith("example.com_page"), "Filename should contain readable prefix");
+        assertTrue(filename1.startsWith("https_example.com_page"), "Filename should contain readable prefix");
     }
 
     @Test

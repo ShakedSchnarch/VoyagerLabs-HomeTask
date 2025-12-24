@@ -33,8 +33,8 @@ public final class UrlUtils {
         // Strategy: Scheme + Host + Path + Query, replacing invalid chars with "_"
         String fullUrl = uri.toString();
 
-        // Remove protocol
-        String cleanUrl = fullUrl.replaceFirst("^https?://", "");
+        // Preserve scheme while keeping filenames safe
+        String cleanUrl = fullUrl.replace("://", "_");
 
         String safeName = INVALID_FILENAME_CHARS.matcher(cleanUrl).replaceAll("_");
 
