@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
  */
 public final class UrlUtils {
 
-    private static final Pattern INVALID_FILENAME_CHARS = Pattern.compile("[^a-zA-Z0-9]");
+    private static final Pattern INVALID_FILENAME_CHARS = Pattern.compile("[^a-zA-Z0-9.-]");
 
     private UrlUtils() {
         // Prevent instantiation

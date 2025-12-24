@@ -15,7 +15,7 @@ class UrlUtilsTest {
         String filename2 = UrlUtils.toFilename(uri2);
 
         assertNotEquals(filename1, filename2, "Filenames should differ due to different query params");
-        assertTrue(filename1.startsWith("example_com_page"), "Filename should contain readable prefix");
+        assertTrue(filename1.startsWith("example.com_page"), "Filename should contain readable prefix");
     }
 
     @Test
@@ -33,6 +33,15 @@ class UrlUtilsTest {
         // Verify structure survives (host_path...)
         String[] parts = filename.split("_");
         assertTrue(parts.length >= 2, "Should have multiple parts due to replacements");
+    }
+
+    @Test
+    void testToFilename_AllowsDotsAndHyphens() throws Exception {
+        URI uri = new URI("https://example.com/foo-bar/baz.v1.html");
+        String filename = UrlUtils.toFilename(uri);
+
+        assertTrue(filename.contains("foo-bar"), "Hyphens should be preserved");
+        assertTrue(filename.contains("baz.v1.html"), "Dots should be preserved");
     }
 
     @Test

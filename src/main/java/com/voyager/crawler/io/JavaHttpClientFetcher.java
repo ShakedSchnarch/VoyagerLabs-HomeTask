@@ -37,7 +37,7 @@ public class JavaHttpClientFetcher implements ContentFetcher {
         Objects.requireNonNull(uri, "URI must not be null");
 
         int attempt = 0;
-        while (attempt <= MAX_RETRIES) {
+        while (attempt < MAX_RETRIES) {
             try {
                 applyPolitenessDelay(attempt, uri);
 

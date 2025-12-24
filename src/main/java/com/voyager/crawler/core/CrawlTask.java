@@ -23,15 +23,35 @@ public class CrawlTask implements Callable<Set<URI>> {
     private final ContentFetcher fetcher;
     private final HtmlParser parser;
     private final ContentStorage storage;
+    private final boolean extractLinks;
 
-    public CrawlTask(URI uri, int depth, ContentFetcher fetcher, HtmlParser parser, ContentStorage storage) {
+    /**
+     * Creates a crawling task for a single URI.
+     *
+     * @param uri           the target URI.
+     * @param depth         the crawl depth for the URI.
+     * @param fetcher       component responsible for fetching content.
+     * @param parser        HTML parser used for link extraction.
+     * @param storage       storage backend for saving fetched pages.
+     * @param extractLinks  flag indicating whether to extract links from the
+     *                      fetched content.
+     */
+    public CrawlTask(URI uri, int depth, ContentFetcher fetcher, HtmlParser parser, ContentStorage storage,
+            boolean extractLinks) {
         this.uri = uri;
         this.depth = depth;
         this.fetcher = fetcher;
         this.parser = parser;
         this.storage = storage;
+        this.extractLinks = extractLinks;
     }
 
+    /**
+     * Fetches, stores, and optionally parses the URI content for outbound links.
+     *
+     * @return a set of discovered links, or an empty set if extraction is skipped
+     *         or fails.
+     */
     @Override
     public Set<URI> call() {
         if (logger.isDebugEnabled()) {
@@ -47,7 +67,10 @@ public class CrawlTask implements Callable<Set<URI>> {
 
             storage.save(uri, content, depth);
 
-            // Extract links for further processing
+            if (!extractLinks) {
+                return Collections.emptySet();
+            }
+
             return parser.extractLinks(uri, content);
 
         } catch (Exception e) {

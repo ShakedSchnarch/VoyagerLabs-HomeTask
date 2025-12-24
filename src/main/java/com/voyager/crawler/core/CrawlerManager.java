@@ -4,6 +4,7 @@ import com.voyager.crawler.config.CrawlerConfig;
 import com.voyager.crawler.io.*;
 import com.voyager.crawler.parser.HtmlParser;
 import com.voyager.crawler.util.UrlDedupService;
+import com.voyager.crawler.util.UrlUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,15 +54,25 @@ public class CrawlerManager {
         this.executor = Executors.newVirtualThreadPerTaskExecutor();
     }
 
+    /**
+     * Executes the crawl from the configured seed URL, enforcing depth and branching
+     * limits while optionally deduplicating URLs.
+     */
     public void crawl() {
         logger.info("Starting crawl: {}", config);
+        URI seed = UrlUtils.normalize(config.seedUrl());
+        if (seed == null) {
+            logger.warn("Seed URL is null after normalization. Aborting crawl.");
+            return;
+        }
+
         Set<URI> currentDepthUrls = new HashSet<>();
         if (config.isUnique()) {
-            if (dedupService.visit(config.seedUrl())) {
-                currentDepthUrls.add(config.seedUrl());
+            if (dedupService.visit(seed)) {
+                currentDepthUrls.add(seed);
             }
         } else {
-            currentDepthUrls.add(config.seedUrl());
+            currentDepthUrls.add(seed);
         }
 
         int currentDepth = 0;
@@ -71,11 +82,12 @@ public class CrawlerManager {
             logger.info("Processing Depth {}: {} URLs", currentDepth, currentDepthUrls.size());
 
             int finalDepth = currentDepth;
+            boolean shouldExtractLinks = finalDepth < config.maxDepth();
 
             // Submit tasks for this wave
             List<CompletableFuture<Set<URI>>> futures = currentDepthUrls.stream()
                     .map(uri -> {
-                        CrawlTask task = new CrawlTask(uri, finalDepth, fetcher, parser, storage);
+                        CrawlTask task = new CrawlTask(uri, finalDepth, fetcher, parser, storage, shouldExtractLinks);
                         return CompletableFuture.supplyAsync(() -> {
                             try {
                                 rateLimiter.acquire();
@@ -108,7 +120,7 @@ public class CrawlerManager {
             // Collect results for NEXT wave
             if (currentDepth < config.maxDepth()) {
                 // No need for synchronization here as we process sequentially in this thread
-                Set<URI> nextDepthUrls = new HashSet<>();
+                Set<URI> nextDepthUrls = new LinkedHashSet<>();
 
                 // Process each result set individually
                 futures.forEach(f -> {
@@ -116,16 +128,9 @@ public class CrawlerManager {
                         Set<URI> links = f.join(); // Result from one page
 
                         links.stream()
+                                .filter(link -> !config.isUnique() || dedupService.visit(link))
                                 .limit(config.maxLinksPerPage())
-                                .forEach(link -> {
-                                    if (config.isUnique()) {
-                                        if (dedupService.visit(link)) {
-                                            nextDepthUrls.add(link);
-                                        }
-                                    } else {
-                                        nextDepthUrls.add(link);
-                                    }
-                                });
+                                .forEach(nextDepthUrls::add);
 
                     } catch (Exception e) {
                         logger.warn("Failed to get results from a task", e);
@@ -143,6 +148,10 @@ public class CrawlerManager {
         logger.info("Crawl finished. Total pages successfully processed: {}", pagesSaved.get());
     }
 
+    /**
+     * Shuts down the executor service backing the crawler, waiting for tasks to
+     * complete and forcing termination if needed.
+     */
     public void shutdown() {
         if (executor != null) {
             logger.info("Shutting down crawler executor...");
