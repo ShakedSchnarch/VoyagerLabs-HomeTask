@@ -1,17 +1,16 @@
 package com.voyager.crawler;
 
-import com.voyager.crawler.config.CrawlerConfig;
-import com.voyager.crawler.core.CrawlerManager;
+import com.voyager.crawler.config.*;
+import com.voyager.crawler.core.*;
 import com.voyager.crawler.io.*;
 import com.voyager.crawler.parser.*;
 import com.voyager.crawler.util.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.*;
 
-import java.net.URI;
+import java.net.*;
 
 /**
- * Main entry point for the Voyager Crawler.
+ * CLI entry point for the Voyager crawler.
  */
 public class CrawlerApplication {
     private static final Logger logger = LoggerFactory.getLogger(CrawlerApplication.class);
@@ -58,7 +57,6 @@ public class CrawlerApplication {
 
         CrawlerConfig config = new CrawlerConfig(seed, maxLinks, depth, unique);
 
-        // Dependency Injection wiring
         ContentFetcher fetcher = new JavaHttpClientFetcher();
         HtmlParser parser = new JsoupHtmlParser();
         ContentStorage storage = new LocalFileStorage("crawled_data");

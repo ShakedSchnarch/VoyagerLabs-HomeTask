@@ -1,17 +1,15 @@
 package com.voyager.crawler.core;
 
-import com.voyager.crawler.config.CrawlerConfig;
+import com.voyager.crawler.config.*;
 import com.voyager.crawler.io.*;
-import com.voyager.crawler.parser.HtmlParser;
-import com.voyager.crawler.util.UrlDedupService;
-import com.voyager.crawler.util.UrlUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.voyager.crawler.parser.*;
+import com.voyager.crawler.util.*;
+import org.slf4j.*;
 
-import java.net.URI;
+import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.*;
 
 public class CrawlerManager {
     private static final Logger logger = LoggerFactory.getLogger(CrawlerManager.class);
@@ -24,20 +22,11 @@ public class CrawlerManager {
     private final ExecutorService executor;
 
     private final AtomicInteger pagesSaved = new AtomicInteger(0);
-    // Limit concurrent I/O operations to avoid "Too many open files" and generic
-    // 429s.
-    // Virtual threads are cheap, but sockets/descriptors are not.
+    // Limit concurrent I/O to avoid fd exhaustion and 429s.
     private final Semaphore rateLimiter = new Semaphore(50);
 
     /**
-     * Constructs a new CrawlerManager.
-     * <p>
-     * Uses {@link Executors#newVirtualThreadPerTaskExecutor()} for high-throughput
-     * I/O-bound tasks testing.
-     * This avoids the overhead of platform threads while maintaining a simple
-     * thread-per-task coding style.
-     * </p>
-     *
+     * Creates a crawler manager backed by a virtual-thread executor for I/O-bound work.
      * @param config       Configuration parameters.
      * @param fetcher      Component to fetch web content.
      * @param parser       Component to parse HTML.
@@ -77,14 +66,13 @@ public class CrawlerManager {
 
         int currentDepth = 0;
 
-        // Loop depths
         while (currentDepth <= config.maxDepth() && !currentDepthUrls.isEmpty()) {
             logger.info("Processing Depth {}: {} URLs", currentDepth, currentDepthUrls.size());
 
             int finalDepth = currentDepth;
             boolean shouldExtractLinks = finalDepth < config.maxDepth();
 
-            // Submit tasks for this wave
+            // Submit tasks for this depth.
             List<CompletableFuture<Set<URI>>> futures = currentDepthUrls.stream()
                     .map(uri -> {
                         CrawlTask task = new CrawlTask(uri, finalDepth, fetcher, parser, storage, shouldExtractLinks,
@@ -114,15 +102,13 @@ public class CrawlerManager {
                 logger.error("Error waiting for depth {} completion", currentDepth, e);
             }
 
-            // Collect results for NEXT wave
+            // Build the next depth from results.
             if (currentDepth < config.maxDepth()) {
-                // No need for synchronization here as we process sequentially in this thread
                 Set<URI> nextDepthUrls = new LinkedHashSet<>();
 
-                // Process each result set individually
                 futures.forEach(f -> {
                     try {
-                        Set<URI> links = f.join(); // Result from one page
+                        Set<URI> links = f.join();
 
                         links.stream()
                                 .filter(link -> !config.isUnique() || dedupService.visit(link))

@@ -1,16 +1,13 @@
 package com.voyager.crawler.core;
 
-import com.voyager.crawler.io.ContentFetcher;
-import com.voyager.crawler.io.ContentStorage;
+import com.voyager.crawler.io.*;
 import com.voyager.crawler.parser.HtmlParser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.*;
 
 import java.net.URI;
-import java.util.Collections;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 
 /**
  * A Callable task responsible for processing a single URL.

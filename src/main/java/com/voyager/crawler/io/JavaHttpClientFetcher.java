@@ -1,27 +1,23 @@
 package com.voyager.crawler.io;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.*;
 
 import java.io.InputStream;
 import java.net.URI;
 import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 /**
- * Implementation of ContentFetcher using Java's native HttpClient (available
- * since Java 11).
- * Supports exponential backoff and basic politeness delays.
+ * Implementation of {@link ContentFetcher} using Java 11's {@link HttpClient}.
+ * Adds exponential backoff and a small politeness delay between requests.
  */
 public class JavaHttpClientFetcher implements ContentFetcher {
     private static final Logger logger = LoggerFactory.getLogger(JavaHttpClientFetcher.class);
     private static final int MAX_RETRIES = 3;
     private static final int BASE_DELAY_MS = 50;
 
-    // Configurable timeout
     private static final Duration TIMEOUT = Duration.ofSeconds(15);
 
     private final HttpClient client;

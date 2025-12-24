@@ -1,19 +1,22 @@
 package com.voyager.crawler.core;
 
-import com.voyager.crawler.config.CrawlerConfig;
+import com.voyager.crawler.config.*;
 import com.voyager.crawler.io.*;
 import com.voyager.crawler.parser.HtmlParser;
 import com.voyager.crawler.util.*;
 import org.junit.jupiter.api.*;
 import org.mockito.*;
 
-import java.net.URI;
+import java.net.*;
 import java.util.*;
 import java.util.stream.*;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests for {@link CrawlerManager} with mocked IO dependencies.
+ */
 class CrawlerManagerTest {
 
     @Mock
@@ -49,8 +52,6 @@ class CrawlerManagerTest {
 
     @Test
     void testBranchingFactorLimit() throws Exception {
-        // Test that if a page returns 10 links, but maxLinksPerPage is 2, only 2 are
-        // followed.
         URI seed = new URI("http://root.com");
         Set<URI> tenLinks = IntStream.range(0, 10)
                 .mapToObj(i -> URI.create("http://child" + i + ".com"))
@@ -61,15 +62,10 @@ class CrawlerManagerTest {
         when(fetcher.fetch(seed)).thenReturn(Optional.of("root"));
         when(parser.extractLinks(eq(seed), anyString())).thenReturn(tenLinks);
 
-        // Mock children
         when(fetcher.fetch(any(URI.class))).thenReturn(Optional.of("child"));
 
         manager = new CrawlerManager(config, fetcher, parser, storage, dedupService);
         manager.crawl();
-
-        // Depth 0: 1 fetch (seed)
-        // Depth 1: should be 2 fetches (limited by maxLinksPerPage=2)
-        // Total fetches = 1 + 2 = 3.
 
         verify(fetcher, times(3)).fetch(any());
     }

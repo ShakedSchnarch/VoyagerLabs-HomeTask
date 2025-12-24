@@ -1,18 +1,17 @@
 package com.voyager.crawler.io;
 
 import com.voyager.crawler.util.UrlUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.*;
 
-import java.io.IOException;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
+import java.io.*;
+import java.net.*;
+import java.nio.charset.*;
 import java.nio.file.*;
-import java.util.Objects;
+import java.util.*;
 
 /**
- * Implementation of ContentStorage that saves pages to the local filesystem.
- * Directory structure: <root>/<depth>/<safe_filename>
+ * Implementation of {@link ContentStorage} that saves pages to the local filesystem.
+ * Directory structure: {@code <root>/<depth>/<safe_filename>}.
  */
 public class LocalFileStorage implements ContentStorage {
     private static final Logger logger = LoggerFactory.getLogger(LocalFileStorage.class);

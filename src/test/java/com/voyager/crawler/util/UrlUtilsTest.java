@@ -1,9 +1,14 @@
 package com.voyager.crawler.util;
 
-import org.junit.jupiter.api.Test;
-import java.net.URI;
+import org.junit.jupiter.api.*;
+
+import java.net.*;
+
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests for {@link UrlUtils}.
+ */
 class UrlUtilsTest {
 
     @Test
@@ -20,17 +25,13 @@ class UrlUtilsTest {
 
     @Test
     void testToFilename_Sanitization() throws Exception {
-        // Use a valid URI that contains characters we definitely want to replace in a
-        // filename (like / and ?)
         URI uri = new URI("https://example.com/foo/bar?q=value");
         String filename = UrlUtils.toFilename(uri);
 
-        // The slash '/' and question mark '?' should be replaced by underscores
         assertFalse(filename.contains("/"), "Slash should be replaced");
         assertFalse(filename.contains("?"), "Question mark should be replaced");
         assertTrue(filename.contains("_"), "Separators should use underscore");
 
-        // Verify structure survives (host_path...)
         String[] parts = filename.split("_");
         assertTrue(parts.length >= 2, "Should have multiple parts due to replacements");
     }

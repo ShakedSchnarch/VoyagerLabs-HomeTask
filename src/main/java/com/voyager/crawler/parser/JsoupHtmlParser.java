@@ -1,18 +1,17 @@
 package com.voyager.crawler.parser;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.*;
-import org.jsoup.select.Elements;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.net.URI;
-import java.util.*;
 import com.voyager.crawler.util.UrlUtils;
+import org.jsoup.*;
+import org.jsoup.nodes.*;
+import org.jsoup.select.*;
+import org.slf4j.*;
+
+import java.net.*;
+import java.util.*;
 
 /**
- * Implementation of HtmlParser using Jsoup.
- * Extracts absolute links from HTML content.
+ * Implementation of {@link HtmlParser} using Jsoup.
+ * Extracts absolute, normalized HTTP(S) links from HTML content.
  */
 public class JsoupHtmlParser implements HtmlParser {
     private static final Logger logger = LoggerFactory.getLogger(JsoupHtmlParser.class);
