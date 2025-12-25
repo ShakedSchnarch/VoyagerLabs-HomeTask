@@ -5,73 +5,168 @@ import com.voyager.crawler.core.*;
 import com.voyager.crawler.io.*;
 import com.voyager.crawler.parser.*;
 import com.voyager.crawler.util.*;
-import org.slf4j.*;
-
 import java.net.*;
+import java.nio.file.*;
+import java.time.*;
+import java.time.format.*;
 
 /**
  * CLI entry point for the Voyager crawler.
  */
 public class CrawlerApplication {
-    private static final Logger logger = LoggerFactory.getLogger(CrawlerApplication.class);
+    private static final boolean DEFAULT_UNIQUE = true;
+    private static final String OUTPUT_DIR_PREFIX = "crawler_output_";
+    private static final DateTimeFormatter OUTPUT_DIR_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
+    /**
+     * CLI entry point for running the crawler.
+     *
+     * @param args command-line arguments.
+     */
     public static void main(String[] args) {
         try {
-            if (args.length < 4) {
-                printUsage();
-                System.exit(1);
+            CliArguments cli = parseArguments(args);
+
+            String outputDirName = buildOutputDirName();
+            Path outputDir = Paths.get(outputDirName).toAbsolutePath().normalize();
+
+            printBanner(cli.seedUrl(), cli.maxDepth(), cli.maxLinksPerPage(), cli.isUnique(), outputDir);
+
+            CrawlerConfig config = new CrawlerConfig(cli.seedUrl(), cli.maxLinksPerPage(), cli.maxDepth(),
+                    cli.isUnique());
+
+            ContentFetcher fetcher = new JavaHttpClientFetcher();
+            HtmlParser parser = new JsoupHtmlParser();
+            ContentStorage storage = new LocalFileStorage(outputDirName);
+            UrlDedupService dedupService = new ConcurrentDedupService();
+
+            CrawlerManager manager = new CrawlerManager(config, fetcher, parser, storage, dedupService);
+
+            long startTimeNs = System.nanoTime();
+            try {
+                manager.crawl();
+            } finally {
+                manager.shutdown();
             }
+            long durationMs = (System.nanoTime() - startTimeNs) / 1_000_000;
+            printSummary(durationMs, outputDir);
 
-            URI seedUrl = new URI(args[0]);
-            int maxLinksPerPage = Integer.parseInt(args[1]);
-            int maxDepth = Integer.parseInt(args[2]);
-            boolean isUnique = Boolean.parseBoolean(args[3]);
-
-            runCrawler(seedUrl, maxLinksPerPage, maxDepth, isUnique);
-
+        } catch (NumberFormatException e) {
+            printError(e.getMessage());
+            printUsage();
+            System.exit(1);
+        } catch (IllegalArgumentException e) {
+            printError(e.getMessage());
+            printUsage();
+            System.exit(1);
         } catch (Exception e) {
-            logger.error("Application failed: {}", e.getMessage(), e);
+            printError("Unexpected error: " + e.getMessage());
             printUsage();
             System.exit(1);
         }
     }
 
+    private static CliArguments parseArguments(String[] args) {
+        if (args == null || args.length < 3 || args.length > 4) {
+            throw new IllegalArgumentException("Expected 3 or 4 arguments.");
+        }
+
+        String seedArg = args[0].trim();
+        if (seedArg.isEmpty()) {
+            throw new IllegalArgumentException("seedUrl must not be empty.");
+        }
+        if (!seedArg.startsWith("http://") && !seedArg.startsWith("https://")) {
+            throw new IllegalArgumentException("seedUrl must start with http:// or https://");
+        }
+        URI seedUrl = URI.create(seedArg);
+
+        int maxDepth = parseNonNegativeInt(args[1], "maxDepth");
+        int maxLinksPerPage = parseNonNegativeInt(args[2], "maxLinksPerPage");
+        boolean isUnique = args.length == 4 ? parseBooleanStrict(args[3], "isUnique") : DEFAULT_UNIQUE;
+
+        return new CliArguments(seedUrl, maxDepth, maxLinksPerPage, isUnique);
+    }
+
+    private static int parseNonNegativeInt(String value, String name) {
+        String trimmed = value == null ? "" : value.trim();
+        if (trimmed.isEmpty()) {
+            throw new NumberFormatException(name + " must be an integer.");
+        }
+
+        int parsed;
+        try {
+            parsed = Integer.parseInt(trimmed);
+        } catch (NumberFormatException e) {
+            throw new NumberFormatException(name + " must be an integer.");
+        }
+
+        if (parsed < 0) {
+            throw new IllegalArgumentException(name + " must be non-negative.");
+        }
+        return parsed;
+    }
+
+    private static boolean parseBooleanStrict(String value, String name) {
+        if (value == null) {
+            throw new IllegalArgumentException(name + " must be 'true' or 'false'.");
+        }
+        String trimmed = value.trim();
+        if ("true".equalsIgnoreCase(trimmed)) {
+            return true;
+        }
+        if ("false".equalsIgnoreCase(trimmed)) {
+            return false;
+        }
+        throw new IllegalArgumentException(name + " must be 'true' or 'false'.");
+    }
+
+    private static String buildOutputDirName() {
+        String timestamp = OUTPUT_DIR_FORMATTER.format(LocalDateTime.now());
+        return OUTPUT_DIR_PREFIX + timestamp;
+    }
+
+    private static void printBanner(URI seedUrl, int maxDepth, int maxLinksPerPage, boolean isUnique,
+            Path outputDir) {
+        System.out.println("Voyager Crawler");
+        System.out.println("----------------");
+        System.out.println("Seed URL: " + seedUrl);
+        System.out.println("Max Depth: " + maxDepth);
+        System.out.println("Max Links/Page: " + maxLinksPerPage);
+        System.out.println("Unique: " + isUnique);
+        System.out.println("Output Directory: " + outputDir);
+        System.out.println();
+    }
+
+    private static void printSummary(long durationMs, Path outputDir) {
+        System.out.println("Crawl complete.");
+        System.out.println("Total execution time: " + durationMs + " ms");
+        System.out.println("Output directory: " + outputDir);
+    }
+
+    private static void printError(String message) {
+        if (message == null || message.isBlank()) {
+            System.out.println("Error: Invalid arguments.");
+            return;
+        }
+        System.out.println("Error: " + message);
+    }
+
     private static void printUsage() {
         System.out.println("""
-                Usage: java -jar crawler.jar <seedUrl> <maxLinksPerPage> <maxDepth> <isUnique>
+                Usage: java -jar crawler.jar <seedUrl> <maxDepth> <maxLinksPerPage> [isUnique]
 
                 Arguments:
                   seedUrl          - The starting URL (e.g., https://example.com)
-                  maxLinksPerPage  - Maximum number of links to follow from each page
                   maxDepth         - Traversal depth (0 = only seed)
-                  isUnique         - true for global uniqueness, false for per-level uniqueness
+                  maxLinksPerPage  - Maximum number of links to follow from each page
+                  isUnique         - Optional; true for global uniqueness, false for per-level uniqueness
+                                    (default: true)
 
                 Example:
-                  java -jar crawler.jar https://www.ynetnews.com 5 2 true
+                  java -jar crawler.jar https://www.ynetnews.com 2 5 true
                 """);
     }
 
-    private static void runCrawler(URI seed, int maxLinks, int depth, boolean unique) {
-        logger.info("Initializing Crawler with: Seed={}, MaxLinks={}, Depth={}, Unique={}", seed, maxLinks, depth,
-                unique);
-
-        CrawlerConfig config = new CrawlerConfig(seed, maxLinks, depth, unique);
-
-        ContentFetcher fetcher = new JavaHttpClientFetcher();
-        HtmlParser parser = new JsoupHtmlParser();
-        ContentStorage storage = new LocalFileStorage("crawled_data");
-        UrlDedupService dedupService = new ConcurrentDedupService();
-
-        CrawlerManager manager = new CrawlerManager(config, fetcher, parser, storage, dedupService);
-
-        long start = System.currentTimeMillis();
-        try {
-            manager.crawl();
-        } finally {
-            manager.shutdown();
-        }
-        long end = System.currentTimeMillis();
-
-        logger.info("Crawl completed in {} ms", (end - start));
+    private record CliArguments(URI seedUrl, int maxDepth, int maxLinksPerPage, boolean isUnique) {
     }
 }

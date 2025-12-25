@@ -10,6 +10,11 @@ A simple, multi-threaded web crawler built with Java 21 Virtual Threads (Project
 * **Politeness**: Checks `Content-Type` to download only HTML and adds a randomized delay between requests.
 * **Resilience**: Retries failed requests with exponential backoff.
 
+## Prerequisites
+
+* Java 21 or higher (JDK 21+).
+* A network connection is required to fetch pages during crawling.
+
 ## How to Run
 
 The easiest way to run the crawler is using the Gradle wrapper included in the project:
@@ -35,6 +40,12 @@ The easiest way to run the crawler is using the Gradle wrapper included in the p
 * `ContentFetcher`: Wrapper around Java's `HttpClient` with retry logic.
 * `HtmlParser`: Uses **Jsoup** to extracting links. Validates strictly (http/https).
 * `LocalFileStorage`: Saves downloaded HTML to the `crawled_data/` directory.
+
+## Design Decisions
+
+* **Virtual Threads**: Preferred over reactive frameworks to keep I/O-bound crawling efficient while maintaining cleaner, blocking-style code.
+* **Architecture**: Emphasizes Separation of Concerns by keeping fetching, parsing, storage, and orchestration modular and testable.
+* **Politeness**: Implements randomized delays and safety checks (e.g., `Content-Type`) to reduce server load and skip non-HTML content.
 
 ## Architecture Diagram
 ![alt text](Architecture.png "Architecture Diagram")
