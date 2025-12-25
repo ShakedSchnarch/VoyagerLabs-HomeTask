@@ -13,6 +13,15 @@ The crawler performs breadth-first traversal by depth, stores each downloaded pa
 - Uses multithreading via virtual threads.
 - Shuts down gracefully after completing the crawl.
 
+## Architecture
+The crawler follows a layered architecture with clear separation of concerns:
+![Layered Architecture](Layered_Architecture.png "Layered Architecture")
+
+## Project Dependencies
+The project uses the following main dependencies:
+![Project Dependencies](Dependencies.png "Project Dependencies")
+
+
 ## Build and Run
 ### Prerequisites
 - JDK 21+ (the build uses a Java 21 toolchain).
@@ -113,7 +122,3 @@ Run tests:
 - JavaScript is not executed; only static HTML is parsed.
 - The rate limiter is a simple global cap, not per-host throttling.
 - Content is stored as UTF-8 without additional HTML sanitization.
-
-## Diagrams
-![Layered Architecture](Layered_Architecture.png "Layered Architecture")
-![Project Dependencies](Dependencies.png "Project Dependencies")
