@@ -11,6 +11,9 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
+/**
+ * Coordinates crawling across depths using concurrent tasks and a bounded I/O rate.
+ */
 public class CrawlerManager {
     private static final Logger logger = LoggerFactory.getLogger(CrawlerManager.class);
 
@@ -22,16 +25,16 @@ public class CrawlerManager {
     private final ExecutorService executor;
 
     private final AtomicInteger pagesSaved = new AtomicInteger(0);
-    // Limit concurrent I/O to avoid fd exhaustion and 429s.
     private final Semaphore rateLimiter = new Semaphore(50);
 
     /**
      * Creates a crawler manager backed by a virtual-thread executor for I/O-bound work.
-     * @param config       Configuration parameters.
-     * @param fetcher      Component to fetch web content.
-     * @param parser       Component to parse HTML.
-     * @param storage      Component to save content to disk.
-     * @param dedupService Component to manage visited URLs.
+     *
+     * @param config       configuration parameters.
+     * @param fetcher      component to fetch web content.
+     * @param parser       component to parse HTML.
+     * @param storage      component to save content to disk.
+     * @param dedupService component to manage visited URLs.
      */
     public CrawlerManager(CrawlerConfig config, ContentFetcher fetcher, HtmlParser parser, ContentStorage storage,
             UrlDedupService dedupService) {
@@ -72,7 +75,6 @@ public class CrawlerManager {
             int finalDepth = currentDepth;
             boolean shouldExtractLinks = finalDepth < config.maxDepth();
 
-            // Submit tasks for this depth.
             List<CompletableFuture<Set<URI>>> futures = currentDepthUrls.stream()
                     .map(uri -> {
                         CrawlTask task = new CrawlTask(uri, finalDepth, fetcher, parser, storage, shouldExtractLinks,
@@ -102,7 +104,6 @@ public class CrawlerManager {
                 logger.error("Error waiting for depth {} completion", currentDepth, e);
             }
 
-            // Build the next depth from results.
             if (currentDepth < config.maxDepth()) {
                 Set<URI> nextDepthUrls = new LinkedHashSet<>();
 
