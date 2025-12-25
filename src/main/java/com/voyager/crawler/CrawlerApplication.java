@@ -15,7 +15,6 @@ import java.util.*;
  * CLI entry point for the Voyager crawler.
  */
 public class CrawlerApplication {
-    private static final boolean DEFAULT_UNIQUE = true;
     private static final String OUTPUT_BASE_DIR = "crawled_data";
     private static final String OUTPUT_DIR_PREFIX = "crawler_output_";
     private static final DateTimeFormatter OUTPUT_DIR_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
@@ -69,8 +68,8 @@ public class CrawlerApplication {
     }
 
     private static CliArguments parseArguments(String[] args) {
-        if (args == null || args.length < 3 || args.length > 4) {
-            throw new IllegalArgumentException("Expected 3 or 4 arguments.");
+        if (args == null || args.length != 4) {
+            throw new IllegalArgumentException("Expected 4 arguments.");
         }
 
         String seedArg = args[0].trim();
@@ -82,11 +81,11 @@ public class CrawlerApplication {
         }
         URI seedUrl = URI.create(seedArg);
 
-        int maxDepth = parseNonNegativeInt(args[1], "maxDepth");
-        int maxLinksPerPage = parseNonNegativeInt(args[2], "maxLinksPerPage");
-        boolean isUnique = args.length == 4 ? parseBooleanStrict(args[3], "isUnique") : DEFAULT_UNIQUE;
+        int maxLinksPerPage = parseNonNegativeInt(args[1], "maxLinksPerPage");
+        int maxDepth = parseNonNegativeInt(args[2], "maxDepth");
+        boolean isUnique = parseBooleanStrict(args[3], "isUnique");
 
-        return new CliArguments(seedUrl, maxDepth, maxLinksPerPage, isUnique);
+        return new CliArguments(seedUrl, maxLinksPerPage, maxDepth, isUnique);
     }
 
     private static int parseNonNegativeInt(String value, String name) {
@@ -157,19 +156,18 @@ public class CrawlerApplication {
     }
 
     private static void printUsage() {
-        ConsolePrinter.info("Usage: java -jar crawler.jar <seedUrl> <maxDepth> <maxLinksPerPage> [isUnique]");
+        ConsolePrinter.info("Usage: java -jar crawler.jar <seedUrl> <maxLinksPerPage> <maxDepth> <isUnique>");
         ConsolePrinter.blankLine();
         ConsolePrinter.info("Arguments:");
         ConsolePrinter.info("  seedUrl          - The starting URL (e.g., https://example.com)");
-        ConsolePrinter.info("  maxDepth         - Traversal depth (0 = only seed)");
         ConsolePrinter.info("  maxLinksPerPage  - Maximum number of links to follow from each page");
-        ConsolePrinter.info("  isUnique         - Optional; true for global uniqueness, false for per-level uniqueness");
-        ConsolePrinter.info("                    (default: true)");
+        ConsolePrinter.info("  maxDepth         - Traversal depth (0 = only seed)");
+        ConsolePrinter.info("  isUnique         - true for global uniqueness, false for per-level uniqueness");
         ConsolePrinter.blankLine();
         ConsolePrinter.info("Example:");
-        ConsolePrinter.info("  java -jar crawler.jar https://www.ynetnews.com 2 5 true");
+        ConsolePrinter.info("  java -jar crawler.jar https://www.ynetnews.com 5 2 true");
     }
 
-    private record CliArguments(URI seedUrl, int maxDepth, int maxLinksPerPage, boolean isUnique) {
+    private record CliArguments(URI seedUrl, int maxLinksPerPage, int maxDepth, boolean isUnique) {
     }
 }

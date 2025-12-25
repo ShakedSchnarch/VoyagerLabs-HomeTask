@@ -1,15 +1,19 @@
 package com.voyager.crawler.io;
 
-import com.voyager.crawler.util.ConsolePrinter;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.http.*;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.*;
+import java.util.Objects;
+import java.util.Optional;
+
+import com.voyager.crawler.util.ConsolePrinter;
 
 /**
- * Implementation of {@link ContentFetcher} using Java 11's {@link HttpClient}.
+ * Implementation of {@link ContentFetcher} using Java's {@link HttpClient}.
  * Adds exponential backoff and a small politeness delay between requests.
  */
 public class JavaHttpClientFetcher implements ContentFetcher {

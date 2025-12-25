@@ -69,4 +69,18 @@ class CrawlerManagerTest {
 
         verify(fetcher, times(3)).fetch(any());
     }
+
+    @Test
+    void testAllowsRevisitWhenNotUnique() throws Exception {
+        URI seed = new URI("http://example.com");
+        CrawlerConfig config = new CrawlerConfig(seed, 5, 1, false);
+
+        when(fetcher.fetch(seed)).thenReturn(Optional.of("root"));
+        when(parser.extractLinks(eq(seed), anyString())).thenReturn(Set.of(seed));
+
+        manager = new CrawlerManager(config, fetcher, parser, storage, dedupService);
+        manager.crawl();
+
+        verify(fetcher, times(2)).fetch(seed);
+    }
 }
