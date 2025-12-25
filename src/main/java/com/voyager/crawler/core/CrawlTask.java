@@ -2,7 +2,7 @@ package com.voyager.crawler.core;
 
 import com.voyager.crawler.io.*;
 import com.voyager.crawler.parser.HtmlParser;
-import org.slf4j.*;
+import com.voyager.crawler.util.ConsolePrinter;
 
 import java.net.URI;
 import java.util.*;
@@ -14,8 +14,6 @@ import java.util.concurrent.atomic.*;
  * Steps: Fetch -> Save -> Extract Links.
  */
 public class CrawlTask implements Callable<Set<URI>> {
-    private static final Logger logger = LoggerFactory.getLogger(CrawlTask.class);
-
     private final URI uri;
     private final int depth;
     private final ContentFetcher fetcher;
@@ -55,10 +53,6 @@ public class CrawlTask implements Callable<Set<URI>> {
      */
     @Override
     public Set<URI> call() {
-        if (logger.isDebugEnabled()) {
-            logger.debug("Starting task for {} at depth {}", uri, depth);
-        }
-
         try {
             var contentOpt = fetcher.fetch(uri);
             if (contentOpt.isEmpty()) {
@@ -76,7 +70,7 @@ public class CrawlTask implements Callable<Set<URI>> {
             return parser.extractLinks(uri, content);
 
         } catch (Exception e) {
-            logger.error("Task failed for {}: {}", uri, e.getMessage());
+            ConsolePrinter.error("Task failed for " + uri + ": " + e);
             return Collections.emptySet();
         }
     }

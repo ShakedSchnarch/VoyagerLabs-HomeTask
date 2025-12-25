@@ -1,20 +1,40 @@
+# =========================
 # Gradle
+# =========================
 .gradle/
 build/
-app/build/
+bin/
 
-# IDEA / Eclipse
+# =========================
+# IDEs and editors
+# =========================
 .idea/
 *.iml
-*.iws
 *.ipr
+*.iws
+.vscode/
 .settings/
 .classpath
 .project
-.vscode/
 
-# OS specific checks
+# =========================
+# OS-specific files
+# =========================
 .DS_Store
+__MACOSX/
 
-# Application Specific
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# Application output
+# =========================
 crawled_data/
+
+# =========================
+# Temporary / generated files
+# =========================
+tmp/
+out/

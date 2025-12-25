@@ -1,7 +1,6 @@
 package com.voyager.crawler.io;
 
-import com.voyager.crawler.util.UrlUtils;
-import org.slf4j.*;
+import com.voyager.crawler.util.*;
 
 import java.io.*;
 import java.net.*;
@@ -14,7 +13,6 @@ import java.util.*;
  * Directory structure: {@code <root>/<depth>/<safe_filename>}.
  */
 public class LocalFileStorage implements ContentStorage {
-    private static final Logger logger = LoggerFactory.getLogger(LocalFileStorage.class);
     private final Path rootDir;
 
     public LocalFileStorage(String rootPath) {
@@ -36,10 +34,9 @@ public class LocalFileStorage implements ContentStorage {
             Path filePath = depthDir.resolve(filename);
 
             Files.writeString(filePath, content, StandardCharsets.UTF_8);
-            logger.info("Saved {} to {}", uri, filePath);
 
         } catch (IOException e) {
-            logger.error("Failed to save content for {}: {}", uri, e.getMessage());
+            ConsolePrinter.error("Failed to save content for " + uri + ": " + e);
             throw new RuntimeException("Storage failure", e);
         }
     }

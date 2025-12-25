@@ -1,10 +1,9 @@
 package com.voyager.crawler.parser;
 
-import com.voyager.crawler.util.UrlUtils;
+import com.voyager.crawler.util.*;
 import org.jsoup.*;
 import org.jsoup.nodes.*;
 import org.jsoup.select.*;
-import org.slf4j.*;
 
 import java.net.*;
 import java.util.*;
@@ -14,8 +13,6 @@ import java.util.*;
  * Extracts absolute, normalized HTTP(S) links from HTML content.
  */
 public class JsoupHtmlParser implements HtmlParser {
-    private static final Logger logger = LoggerFactory.getLogger(JsoupHtmlParser.class);
-
     @Override
     public Set<URI> extractLinks(URI baseUri, String html) {
         Objects.requireNonNull(baseUri, "baseUri must not be null");
@@ -40,11 +37,10 @@ public class JsoupHtmlParser implements HtmlParser {
                     }
                 } catch (IllegalArgumentException e) {
                     // Ignore malformed URLs
-                    logger.trace("Skipping malformed URL: {}", absUrl);
                 }
             }
         } catch (Exception e) {
-            logger.error("Failed to parse HTML from {}", baseUri, e);
+            ConsolePrinter.error("Failed to parse HTML from " + baseUri + ": " + e);
         }
 
         return links;

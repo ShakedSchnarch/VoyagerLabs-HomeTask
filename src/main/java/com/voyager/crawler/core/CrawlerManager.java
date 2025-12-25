@@ -4,7 +4,6 @@ import com.voyager.crawler.config.*;
 import com.voyager.crawler.io.*;
 import com.voyager.crawler.parser.*;
 import com.voyager.crawler.util.*;
-import org.slf4j.*;
 
 import java.net.*;
 import java.util.*;
@@ -15,8 +14,6 @@ import java.util.concurrent.atomic.*;
  * Coordinates crawling across depths using concurrent tasks and a bounded I/O rate.
  */
 public class CrawlerManager {
-    private static final Logger logger = LoggerFactory.getLogger(CrawlerManager.class);
-
     private final CrawlerConfig config;
     private final ContentFetcher fetcher;
     private final HtmlParser parser;
@@ -51,10 +48,9 @@ public class CrawlerManager {
      * limits while optionally deduplicating URLs.
      */
     public void crawl() {
-        logger.info("Starting crawl: {}", config);
         URI seed = UrlUtils.normalize(config.seedUrl());
         if (seed == null) {
-            logger.warn("Seed URL is null after normalization. Aborting crawl.");
+            ConsolePrinter.warn("Seed URL is null after normalization. Aborting crawl.");
             return;
         }
 
@@ -70,7 +66,8 @@ public class CrawlerManager {
         int currentDepth = 0;
 
         while (currentDepth <= config.maxDepth() && !currentDepthUrls.isEmpty()) {
-            logger.info("Processing Depth {}: {} URLs", currentDepth, currentDepthUrls.size());
+            ConsolePrinter.info("Processing Depth " + currentDepth + "/" + config.maxDepth() + ": "
+                    + currentDepthUrls.size() + " URLs");
 
             int finalDepth = currentDepth;
             boolean shouldExtractLinks = finalDepth < config.maxDepth();
@@ -101,7 +98,7 @@ public class CrawlerManager {
             try {
                 allDone.join();
             } catch (Exception e) {
-                logger.error("Error waiting for depth {} completion", currentDepth, e);
+                ConsolePrinter.error("Error waiting for depth " + currentDepth + " completion: " + e);
             }
 
             if (currentDepth < config.maxDepth()) {
@@ -117,7 +114,7 @@ public class CrawlerManager {
                                 .forEach(nextDepthUrls::add);
 
                     } catch (Exception e) {
-                        logger.warn("Failed to get results from a task", e);
+                        ConsolePrinter.warn("Failed to get results from a task: " + e);
                     }
                 });
 
@@ -129,7 +126,7 @@ public class CrawlerManager {
             currentDepth++;
         }
 
-        logger.info("Crawl finished. Total pages successfully processed: {}", pagesSaved.get());
+        ConsolePrinter.info("Crawl finished. Total pages successfully processed: " + pagesSaved.get());
     }
 
     /**
@@ -138,15 +135,14 @@ public class CrawlerManager {
      */
     public void shutdown() {
         if (executor != null) {
-            logger.info("Shutting down crawler executor...");
             executor.shutdown();
             try {
                 if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
-                    logger.warn("Executor did not terminate in time, forcing shutdown...");
+                    ConsolePrinter.warn("Executor did not terminate in time, forcing shutdown...");
                     executor.shutdownNow();
                 }
             } catch (InterruptedException e) {
-                logger.warn("Shutdown interrupted, forcing shutdown...");
+                ConsolePrinter.warn("Shutdown interrupted, forcing shutdown...");
                 executor.shutdownNow();
                 Thread.currentThread().interrupt();
             }

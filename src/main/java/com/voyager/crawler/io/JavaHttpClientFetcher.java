@@ -1,7 +1,6 @@
 package com.voyager.crawler.io;
 
-import org.slf4j.*;
-
+import com.voyager.crawler.util.ConsolePrinter;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.http.*;
@@ -14,7 +13,6 @@ import java.util.*;
  * Adds exponential backoff and a small politeness delay between requests.
  */
 public class JavaHttpClientFetcher implements ContentFetcher {
-    private static final Logger logger = LoggerFactory.getLogger(JavaHttpClientFetcher.class);
     private static final int MAX_RETRIES = 3;
     private static final int BASE_DELAY_MS = 50;
 
@@ -54,7 +52,6 @@ public class JavaHttpClientFetcher implements ContentFetcher {
                         // Check Content-Type
                         Optional<String> contentTypeOpt = response.headers().firstValue("Content-Type");
                         if (contentTypeOpt.isPresent() && !contentTypeOpt.get().toLowerCase().contains("text/html")) {
-                            logger.debug("Skipping non-HTML content: {} ({})", uri, contentTypeOpt.get());
                             return Optional.empty();
                         }
 
@@ -64,26 +61,28 @@ public class JavaHttpClientFetcher implements ContentFetcher {
                     }
 
                     if (isRetryable(status)) {
-                        logger.warn("Fetch failed for URI: {}. Status code: {}. Retrying...", uri, status);
+                        ConsolePrinter.warn(
+                                "Fetch failed for URI: " + uri + ". Status code: " + status + ". Retrying...");
                         attempt++;
                         continue;
                     }
 
-                    logger.warn("Fetch failed for URI: {}. Status code: {}. Aborting task.", uri, status);
+                    ConsolePrinter.warn(
+                            "Fetch failed for URI: " + uri + ". Status code: " + status + ". Aborting task.");
                     return Optional.empty();
                 }
 
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                logger.warn("Fetch interrupted for URI: {}", uri);
+                ConsolePrinter.warn("Fetch interrupted for URI: " + uri);
                 return Optional.empty();
             } catch (Exception e) {
-                logger.error("Error fetching URI: {}. Error: {}", uri, e.getMessage());
+                ConsolePrinter.error("Error fetching URI: " + uri + ". Error: " + e);
                 attempt++;
             }
         }
 
-        logger.error("Dropping URL after {} attempts: {}", MAX_RETRIES, uri);
+        ConsolePrinter.error("Dropping URL after " + MAX_RETRIES + " attempts: " + uri);
         return Optional.empty();
     }
 
@@ -91,7 +90,6 @@ public class JavaHttpClientFetcher implements ContentFetcher {
         long delay = BASE_DELAY_MS + (long) (Math.random() * 100);
         if (attempt > 0) {
             delay = (long) Math.pow(2, attempt) * 500; // Exponential backoff
-            logger.debug("Retrying {} in {}ms (Attempt {})", uri, delay, attempt + 1);
         }
         Thread.sleep(delay);
     }

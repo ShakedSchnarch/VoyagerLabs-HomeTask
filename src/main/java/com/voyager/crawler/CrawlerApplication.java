@@ -9,12 +9,14 @@ import java.net.*;
 import java.nio.file.*;
 import java.time.*;
 import java.time.format.*;
+import java.util.*;
 
 /**
  * CLI entry point for the Voyager crawler.
  */
 public class CrawlerApplication {
     private static final boolean DEFAULT_UNIQUE = true;
+    private static final String OUTPUT_BASE_DIR = "crawled_data";
     private static final String OUTPUT_DIR_PREFIX = "crawler_output_";
     private static final DateTimeFormatter OUTPUT_DIR_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
@@ -122,49 +124,50 @@ public class CrawlerApplication {
 
     private static String buildOutputDirName() {
         String timestamp = OUTPUT_DIR_FORMATTER.format(LocalDateTime.now());
-        return OUTPUT_DIR_PREFIX + timestamp;
+        return Paths.get(OUTPUT_BASE_DIR, OUTPUT_DIR_PREFIX + timestamp).toString();
     }
 
     private static void printBanner(URI seedUrl, int maxDepth, int maxLinksPerPage, boolean isUnique,
             Path outputDir) {
-        System.out.println("Voyager Crawler");
-        System.out.println("----------------");
-        System.out.println("Seed URL: " + seedUrl);
-        System.out.println("Max Depth: " + maxDepth);
-        System.out.println("Max Links/Page: " + maxLinksPerPage);
-        System.out.println("Unique: " + isUnique);
-        System.out.println("Output Directory: " + outputDir);
-        System.out.println();
+        ConsolePrinter.info("Voyager Crawler");
+        ConsolePrinter.info("----------------");
+        ConsolePrinter.infoKeyValue("Seed URL:", seedUrl);
+        ConsolePrinter.infoKeyValue("Max Depth:", maxDepth);
+        ConsolePrinter.infoKeyValue("Max Links/Page:", maxLinksPerPage);
+        ConsolePrinter.infoKeyValue("Unique:", isUnique);
+        ConsolePrinter.infoKeyValue("Output Directory:", outputDir);
+        ConsolePrinter.blankLine();
     }
 
     private static void printSummary(long durationMs, Path outputDir) {
-        System.out.println("Crawl complete.");
-        System.out.println("Total execution time: " + durationMs + " ms");
-        System.out.println("Output directory: " + outputDir);
+        double durationSeconds = durationMs / 1000.0;
+        String durationText = String.format(Locale.US, "%.2f s (%d ms)", durationSeconds, durationMs);
+        ConsolePrinter.info("Results:");
+        ConsolePrinter.info("Crawl complete.");
+        ConsolePrinter.info("Total execution time: " + durationText);
+        ConsolePrinter.info("Output directory: " + outputDir);
     }
 
     private static void printError(String message) {
         if (message == null || message.isBlank()) {
-            System.out.println("Error: Invalid arguments.");
+            ConsolePrinter.error("Invalid arguments.");
             return;
         }
-        System.out.println("Error: " + message);
+        ConsolePrinter.error(message);
     }
 
     private static void printUsage() {
-        System.out.println("""
-                Usage: java -jar crawler.jar <seedUrl> <maxDepth> <maxLinksPerPage> [isUnique]
-
-                Arguments:
-                  seedUrl          - The starting URL (e.g., https://example.com)
-                  maxDepth         - Traversal depth (0 = only seed)
-                  maxLinksPerPage  - Maximum number of links to follow from each page
-                  isUnique         - Optional; true for global uniqueness, false for per-level uniqueness
-                                    (default: true)
-
-                Example:
-                  java -jar crawler.jar https://www.ynetnews.com 2 5 true
-                """);
+        ConsolePrinter.info("Usage: java -jar crawler.jar <seedUrl> <maxDepth> <maxLinksPerPage> [isUnique]");
+        ConsolePrinter.blankLine();
+        ConsolePrinter.info("Arguments:");
+        ConsolePrinter.info("  seedUrl          - The starting URL (e.g., https://example.com)");
+        ConsolePrinter.info("  maxDepth         - Traversal depth (0 = only seed)");
+        ConsolePrinter.info("  maxLinksPerPage  - Maximum number of links to follow from each page");
+        ConsolePrinter.info("  isUnique         - Optional; true for global uniqueness, false for per-level uniqueness");
+        ConsolePrinter.info("                    (default: true)");
+        ConsolePrinter.blankLine();
+        ConsolePrinter.info("Example:");
+        ConsolePrinter.info("  java -jar crawler.jar https://www.ynetnews.com 2 5 true");
     }
 
     private record CliArguments(URI seedUrl, int maxDepth, int maxLinksPerPage, boolean isUnique) {
